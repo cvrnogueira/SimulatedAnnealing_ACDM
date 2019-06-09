@@ -4,6 +4,7 @@ import copy
 import math
 from math import sqrt
 from itertools import islice
+from numpy.random import random_integers as ri
 
 
 def get_instance(filename):
@@ -20,29 +21,19 @@ def get_instance(filename):
 
     return int(instance_line_1[0]), weights
 
-
-
-def normalize01(x, func, a, b):
-    a, b = min(func(a), func(b)), max(func(a), func(b))
-
-    return (func(x) - a) / (b - a)
-
-
 def learn(N, P) -> list:
-        sa = SimulatedAnnealing(size= N, weights = P, temperature=100.0, dec_temperature=0.92, num_iterations=N, max_changes=8)
+        sa = SimulatedAnnealing(size= N, weights = P, temperature=100.0, dec_temperature=0.92, num_iterations=N, max_changes=4)
         #sa.fitness_function = self.run_episode
         sa.run()
 
-        return sa.current_state
+        return sa.actual_state
 
 
 class SimulatedAnnealing:
 
-    def __init__(self, weights, size, temperature, dec_temperature, num_iterations, max_changes=8):
-        self.current_state = []
+    def __init__(self, weights, size, temperature, dec_temperature, num_iterations, max_changes=4):
+        self.actual_state = []
         self.size = size
-        self.min_value = -10
-        self.max_value = 10
         self.temperature = temperature
         self.dec_temperature = dec_temperature
         self.num_iterations = num_iterations
@@ -50,59 +41,64 @@ class SimulatedAnnealing:
         self.inc_neighbor = 2
         self.initial_state = weights
         self.score = 0;
+        self.max_value = 10;
+        self.min_value =  -10;
 
+    #TODO: HEEELP
     #Como função de fitness vou somar a duração das tarefas com a solução dada
-    def fitness_function(self, solution):        
-        print(solution)
-        #  print(weights)
+    def fitness_function(self, solution):       
+        value = sum(solution) 
+        return value
 
     def update_temperature(self):
         self.temperature *= self.dec_temperature
 
+
     def get_random_neighbor(self, current):
         neighbor = current
 
-        changes = random.randint(1, self.max_changes)
-        for i in random.sample([x for x in range(0, self.size)], changes):
-            inc =  random.uniform(-self.inc_neighbor, self.inc_neighbor)
-            if inc > 0:
-                inc = min(self.max_value, inc)
+        changes = random.randint(1, self.max_changes) #vejo qual será o número de mudanças
+        for i in random.sample([x for x in range(0, self.size-1)], changes):  #seleciono os vizinhos aleatórios para a mudança
+
+            perturbation = ri(-self.inc_neighbor,self.inc_neighbor) 
+
+            if perturbation > 0:
+                perturbation = min(self.max_value, perturbation)
             else:
-                inc = max(self.min_value, inc)
-            neighbor[i] += inc
+                perturbation = max(self.min_value, perturbation)
+
+            neighbor[i] += perturbation
 
         return neighbor
 
 
     def run(self):
         #Solução inicial : exato como foi a leitura do arquivo
-        self.current_state = self.initial_state
+        self.actual_state_copy = self.initial_state
 
         while self.temperature > 0.01:
-             self.update_temperature()
-             for i in range(2): #(self.num_iterations):
-                candidate = self.get_random_neighbor(self.current_state.copy())
+            self.update_temperature()
+            for i in range(self.num_iterations):
+                candidate = self.get_random_neighbor(self.actual_state_copy.copy())
 
                 candidate_score = self.fitness_function(candidate)
-               # current_state_score = self.fitness_function(self.current_state)
+                actual_state_score = self.fitness_function(self.actual_state_copy)
 
-        #         delta = candidate_score - current_state_score
-        #         self.score = current_state_score
+                delta = candidate_score - actual_state_score
+                self.score = actual_state_score
 
-        #         if(delta > 0):
-        #             self.current_state = candidate
-        #             self.score = candidate_score
-        #         else:
-        #             p = math.exp(delta/self.temperature)
-        #             if(random.random() < p):
-        #                 self.current_state = candidate
-        #                 self.score = candidate_score
-
-        #    print("Temperature "+str("{0:0.2f}".format(self.temperature))+":")
-        #    print(self)
+                if(delta > 0):
+                    self.actual_state_copy = candidate
+                    self.score = candidate_score
+                else:
+                    p = math.exp(delta/self.temperature)
+                    if(random.random() < p):
+                        self.actual_state_copy = candidate
+                        self.score = candidate_score
+        print(self)
 
     def __str__(self):
-        return 'state = ' + str(["{0:0.2f}".format(i) for i in self.current_state]) + ' score = ' + str(self.score);
+        return 'Estado da solução = \n' + str(["{0:0.2f}".format(i) for i in self.actual_state_copy]) + '\n Valor encontrado para T = \n' + str(self.score) + ' \n Solução inicial = \n' + str(self.initial_state);
 
 get_instance_on_file = get_instance("trsp/trsp_50_1.dat")
 learn(get_instance_on_file[0], get_instance_on_file[1])

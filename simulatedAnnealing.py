@@ -105,8 +105,13 @@ class SimulatedAnnealing:
 
         #changes = random.randint(1, self.max_changes) #vejo qual será o número de mudanças
 
-        for i in random.sample([x for x in range(0, self.size-1)], self.max_changes):  #seleciono os vizinhos aleatórios para a mudança
-          changes_list.append(i)
+        #Emulating do-while in python:
+
+        while True:
+            for i in random.sample([x for x in range(0, self.size-1)], self.max_changes):  #seleciono os vizinhos aleatórios para a mudança
+              changes_list.append(i)
+            if(changes_list[0] != changes_list[1]):
+                break
 
         change1 = neighbor[changes_list[0]]
         change2 = neighbor[changes_list[1]]
@@ -136,8 +141,8 @@ class SimulatedAnnealing:
                 candidate = self.get_random_neighbor(self.actual_state_copy[0].copy(), self.actual_state_copy[1].copy())
 
                 candidate_score = self.getFitness(self.actual_state_copy[0], candidate)
-
                 actual_state_score = self.getFitness(self.actual_state_copy[0], self.actual_state_copy[1])
+
 
                 delta = candidate_score - actual_state_score
                 self.score = actual_state_score

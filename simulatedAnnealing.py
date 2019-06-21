@@ -33,6 +33,13 @@ def getInitialSolution(P):
         gap2 = abs((s[i-2] + P[i-2]) - (s[i-1] + P[i-1]))
         max_gap = max(gap1, gap2)
         chosen_gaps[i] = max_gap
+        if 2*P[i] > chosen_gaps[i]:
+            problematic_gap = chosen_gaps[i]
+            problematic_indice = i
+            for j in range(1, len(P)):
+             if s[j] > s[problematic_indice]:
+                s[j] = s[j] + 2*P[problematic_indice] - problematic_gap
+
         if max_gap == gap1:
             s[i] = s[i-2] + P[i]
         else:

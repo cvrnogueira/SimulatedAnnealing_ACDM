@@ -64,7 +64,7 @@ def learn() -> list:
         initialSolution = getInitialSolution(get_instance_on_file[1])
         feasibility_status = checkFeasibility(initialSolution[0], initialSolution[1])
         if feasibility_status:
-            sa = SimulatedAnnealing(initialSolution= initialSolution, temperature=100.0, dec_temperature=0.92, num_iterations=len(initialSolution[0]), max_changes=4)
+            sa = SimulatedAnnealing(initialSolution= initialSolution, temperature=100.0, dec_temperature=0.92, num_iterations=len(initialSolution[0]), max_changes=2)
             sa.run()
         else:
             print("ERROR: Initial solution not feasible!!!")
@@ -74,7 +74,7 @@ def learn() -> list:
 
 class SimulatedAnnealing:
 
-    def __init__(self, initialSolution, temperature, dec_temperature, num_iterations, max_changes=4):
+    def __init__(self, initialSolution, temperature, dec_temperature, num_iterations, max_changes):
         self.actual_state = []
         self.temperature = temperature
         self.dec_temperature = dec_temperature
@@ -83,8 +83,10 @@ class SimulatedAnnealing:
         self.inc_neighbor = 2
         self.initial_state = initialSolution
         self.score = 0;
+        self.size = len(initialSolution[0])
         self.max_value = 10;
         self.min_value =  -10;
+        self.best_score = None
 
     #TODO: HEEELP
     #Como função de fitness vou somar a duração das tarefas com a solução dada
@@ -98,52 +100,63 @@ class SimulatedAnnealing:
         self.temperature *= self.dec_temperature
 
 
-    def get_random_neighbor(self, current):
-        neighbor = current
+    def get_random_neighbor(self, P, current_s):
+        neighbor = current_s
+        #List that the index that are going to change in this iteraction will be stored
+        changes_list = []
 
-        changes = random.randint(1, self.max_changes) #vejo qual será o número de mudanças
-        for i in random.sample([x for x in range(0, self.size-1)], changes):  #seleciono os vizinhos aleatórios para a mudança
+        #changes = random.randint(1, self.max_changes) #vejo qual será o número de mudanças
 
-            perturbation = ri(-self.inc_neighbor,self.inc_neighbor) 
+        for i in random.sample([x for x in range(0, self.size-1)], self.max_changes):  #seleciono os vizinhos aleatórios para a mudança
+          changes_list.append(i)
 
-            if perturbation > 0:
-                perturbation = min(self.max_value, perturbation)
-            else:
-                perturbation = max(self.min_value, perturbation)
+        change1 = neighbor[changes_list[0]]
+        change2 = neighbor[changes_list[1]]
 
-            neighbor[i] += perturbation
+        neighbor[changes_list[0]] = change2
+        neighbor[changes_list[1]] = change1
 
+        '''
+         I don't think is a good idea checkFeasibility every time because this is expensive to do, so we d need a way to proove that the solution
+        will be always factible when changing two neigboards. Since the initial solution is factible to everybody (abs(si- sj) >= min i, j, for all i, j in n)
+        i can't see why just permutting the solution won't be factible anymore. Anyway, we have to think on a way to proove this
+        print(checkFeasibility(P, neighbor))
+        '''
         return neighbor
 
 
     def run(self):
         #initial_state: Tuple (P, s)
         self.actual_state_copy = self.initial_state 
-
-        print(self.actual_state_copy)
-        '''
+       
+        self.best_score = self.getFitness(self.actual_state_copy[0], self.actual_state_copy[1])
         while self.temperature > 0.01:
             self.update_temperature()
             for i in range(self.num_iterations):
-                candidate = self.get_random_neighbor(self.actual_state_copy.copy())
-
-                candidate_score = self.getFitness(candidate)
-                actual_state_score = self.getFitness(self.actual_state_copy)
-
+                candidate = self.get_random_neighbor(self.actual_state_copy[0].copy(), self.actual_state_copy[1].copy())
+                
+                candidate_score = self.getFitness(self.actual_state_copy[0], candidate)
+                actual_state_score = self.getFitness(self.actual_state_copy[0], self.actual_state_copy[1])
+                   
                 delta = candidate_score - actual_state_score
                 self.score = actual_state_score
 
                 if(delta > 0):
-                    self.actual_state_copy = candidate
+                    self.actual_state_copy = (self.actual_state_copy[0], candidate)
                     self.score = candidate_score
+                    if self.best_score > self.score:
+                        self.best_score = self.score
                 else:
                     p = math.exp(delta/self.temperature)
                     if(random.random() < p):
-                        self.actual_state_copy = candidate
+                        self.actual_state_copy = (self.actual_state_copy[0], candidate)
                         self.score = candidate_score
+                        if self.best_score > self.score:
+                            self.best_score = self.score
+                
         print(self)
-        '''
+        
     def __str__(self):
-        return 'Estado da solução = \n' + str(["{0:0.2f}".format(i) for i in self.actual_state_copy]) + '\n Valor encontrado para T = \n' + str(self.score) + ' \n Solução inicial = \n' + str(self.initial_state);
+        return 'Estado da solução = \n' + str(["{0:0.2f}".format(i) for i in self.actual_state_copy[1]]) + '\n Valor encontrado para T = \n' + str(self.best_score) + ' \n Solução inicial = \n' +  str(["{0:0.2f}".format(i) for i in self.initial_state[1]]);
 
 learn()

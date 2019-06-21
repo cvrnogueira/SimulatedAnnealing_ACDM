@@ -5,7 +5,56 @@ import math
 from math import sqrt
 from itertools import islice
 from numpy.random import random_integers as ri
+import numpy as np
 
+
+def checkFeasibility(P, s):
+    status = True
+    for i in range(0, len(P)):
+        for j in range(0, len(P)):
+            if status and i!=j:
+                feasible = abs(s[i] - s[j]) >= min(P[i], P[j])
+                if not(feasible):
+                    print("feasibilty print")
+                    print(s[i], s[j],  abs(s[i] - s[j]), P[i], P[j], min(P[i], P[j]))
+                    status = False
+    return status
+
+def getInitialSolution(P):
+    order_descending = P.sort(reverse=True)
+    s = [0] * len(P)
+    chosen_gaps = [0] * len(P)
+    i = 1
+    s[i-1] = 0
+    s[i] = s[i-1] + P[i]
+    chosen_gaps[1] = abs(s[0] - s[1])
+    for i in range(2, len(P)):
+        gap1 = abs(s[i-2] - s[i-1])
+        gap2 = abs((s[i-2] + P[i-2]) - (s[i-1] + P[i-1]))
+        max_gap = max(gap1, gap2)
+        chosen_gaps[i] = max_gap
+        if max_gap == gap1:
+            s[i] = s[i-2] + P[i]
+        else:
+            s[i] = (s[i-1] + P[i-1]) + P[i]
+    print("solution print")
+    print(P, s, chosen_gaps)
+    return (P,s, chosen_gaps)
+
+def transformIntoFeasibleSolution(P, s, chosen_gaps):
+    #gap começa em zero!!
+    if not(checkFeasibility(P, s)):
+        for i in range(1,len(P)):
+            if 2*P[i] > chosen_gaps[i]:
+                problematic_gap = chosen_gaps[i]
+                problematic_indice = i
+            break;
+
+        for i in range(1, len(P)):
+             if s[i] > s[problematic_indice]:
+                s[i] = s[i] + 2*P[problematic_indice] - problematic_gap
+
+    return(P, s, checkFeasibility(P, s))
 
 def get_instance(filename):
     file = open(filename, 'r')
@@ -14,7 +63,7 @@ def get_instance(filename):
 
     instance_line_1 = file.readline().strip().split()
 
-    for line in islice(file, 1, None):
+    for line in islice(file, 0, None):
         instance = line.strip().split()
         weights.append(float(instance[0]))        
     file.close()
@@ -100,5 +149,10 @@ class SimulatedAnnealing:
     def __str__(self):
         return 'Estado da solução = \n' + str(["{0:0.2f}".format(i) for i in self.actual_state_copy]) + '\n Valor encontrado para T = \n' + str(self.score) + ' \n Solução inicial = \n' + str(self.initial_state);
 
-get_instance_on_file = get_instance("trsp/trsp_50_1.dat")
-learn(get_instance_on_file[0], get_instance_on_file[1])
+get_instance_on_file = get_instance("instances/teste.dat")
+initialSolution = getInitialSolution(get_instance_on_file[1])
+#feasibility_status = checkFeasibility(initialSolution[0], initialSolution[1])
+#if not(feasibility_status):
+response = transformIntoFeasibleSolution(initialSolution[0], initialSolution[1], initialSolution[2])
+print(response)
+#learn(get_instance_on_file[0], get_instance_on_file[1])

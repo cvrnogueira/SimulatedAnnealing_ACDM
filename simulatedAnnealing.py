@@ -7,7 +7,8 @@ from itertools import islice
 from numpy.random import random_integers as ri
 import numpy as np
 
-
+#Just a function to guide us during development
+#Idea: Test this when we generate neighboards, if is not feasible we brak and give an error
 def checkFeasibility(P, s):
     status = True
     for i in range(0, len(P)):
@@ -15,53 +16,34 @@ def checkFeasibility(P, s):
             if status and i!=j:
                 feasible = abs(s[i] - s[j]) >= min(P[i], P[j])
                 if not(feasible):
-                    print("feasibilty print")
-                    print(s[i], s[j],  abs(s[i] - s[j]), P[i], P[j], min(P[i], P[j]))
                     status = False
     return status
 
 def getInitialSolution(P):
+    #Add descending order because we think this way the initial solution will be better
     order_descending = P.sort(reverse=True)
-    s = [0] * len(P)
-    chosen_gaps = [0] * len(P)
+    #start s array with -1
+    s = [-1] * len(P)
+    #Create the first and second si's because they are always the same
     i = 1
     s[i-1] = 0
     s[i] = s[i-1] + P[i]
-    chosen_gaps[1] = abs(s[0] - s[1])
+    # start algorithm for the rest of the P's list
     for i in range(2, len(P)):
         gap1 = abs(s[i-2] - s[i-1])
         gap2 = abs((s[i-2] + P[i-2]) - (s[i-1] + P[i-1]))
         max_gap = max(gap1, gap2)
-        chosen_gaps[i] = max_gap
-        if 2*P[i] > chosen_gaps[i]:
-            problematic_gap = chosen_gaps[i]
-            problematic_indice = i
+        #Transform into feasible solution
+        if 2*P[i] > max_gap:
             for j in range(1, len(P)):
-             if s[j] > s[problematic_indice]:
-                s[j] = s[j] + 2*P[problematic_indice] - problematic_gap
-
+             if s[j] > s[i]:
+                s[j] = s[j] + 2*P[i] - max_gap
+        #continue with the algorithm
         if max_gap == gap1:
             s[i] = s[i-2] + P[i]
         else:
             s[i] = (s[i-1] + P[i-1]) + P[i]
-    print("solution print")
-    print(P, s, chosen_gaps)
-    return (P,s, chosen_gaps)
-
-def transformIntoFeasibleSolution(P, s, chosen_gaps):
-    #gap começa em zero!!
-    if not(checkFeasibility(P, s)):
-        for i in range(1,len(P)):
-            if 2*P[i] > chosen_gaps[i]:
-                problematic_gap = chosen_gaps[i]
-                problematic_indice = i
-            break;
-
-        for i in range(1, len(P)):
-             if s[i] > s[problematic_indice]:
-                s[i] = s[i] + 2*P[problematic_indice] - problematic_gap
-
-    return(P, s, checkFeasibility(P, s))
+    return (P,s)
 
 def get_instance(filename):
     file = open(filename, 'r')
@@ -158,8 +140,7 @@ class SimulatedAnnealing:
 
 get_instance_on_file = get_instance("instances/teste.dat")
 initialSolution = getInitialSolution(get_instance_on_file[1])
-#feasibility_status = checkFeasibility(initialSolution[0], initialSolution[1])
+feasibility_status = checkFeasibility(initialSolution[0], initialSolution[1])
 #if not(feasibility_status):
-response = transformIntoFeasibleSolution(initialSolution[0], initialSolution[1], initialSolution[2])
-print(response)
+print(feasibility_status)
 #learn(get_instance_on_file[0], get_instance_on_file[1])

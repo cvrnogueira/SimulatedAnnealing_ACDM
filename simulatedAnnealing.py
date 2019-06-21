@@ -4,8 +4,6 @@ import copy
 import math
 from math import sqrt
 from itertools import islice
-from numpy.random import random_integers as ri
-import numpy as np
 
 #Just a function to guide us during development
 #Idea: Test this when we generate neighboards, if is not feasible we brak and give an error
@@ -16,6 +14,7 @@ def checkFeasibility(P, s):
             if status and i!=j:
                 feasible = abs(s[i] - s[j]) >= min(P[i], P[j])
                 if not(feasible):
+                    print("Not feasible: ", s[i], s[j], i, j, P[i], P[j])
                     status = False
     return status
 
@@ -31,7 +30,7 @@ def getInitialSolution(P):
     # start algorithm for the rest of the P's list
     for i in range(2, len(P)):
         gap1 = abs(s[i-2] - s[i-1])
-        gap2 = abs((s[i-2] + P[i-2]) - (s[i-1] + P[i-1]))
+        gap2 = abs((s[i-1] - P[i-1]))
         max_gap = max(gap1, gap2)
         #Transform into feasible solution
         if 2*P[i] > max_gap:
@@ -42,7 +41,7 @@ def getInitialSolution(P):
         if max_gap == gap1:
             s[i] = s[i-2] + P[i]
         else:
-            s[i] = (s[i-1] + P[i-1]) + P[i]
+            s[i] = s[i-1] + P[i]
     return (P,s)
 
 def get_instance(filename):
@@ -60,11 +59,12 @@ def get_instance(filename):
     return int(instance_line_1[0]), weights
 
 def learn() -> list:
-        get_instance_on_file = get_instance("instances/teste.dat")
+        get_instance_on_file = get_instance("instances/trsp_50_1.dat")
         initialSolution = getInitialSolution(get_instance_on_file[1])
+        print(initialSolution[0], initialSolution[1])
         feasibility_status = checkFeasibility(initialSolution[0], initialSolution[1])
         if feasibility_status:
-            sa = SimulatedAnnealing(initialSolution= initialSolution, temperature=100.0, dec_temperature=0.92, num_iterations=len(initialSolution[0]), max_changes=2)
+            sa = SimulatedAnnealing(initialSolution= initialSolution, temperature=100.0, dec_temperature=0.92, num_iterations=3, max_changes=2)
             sa.run()
         else:
             print("ERROR: Initial solution not feasible!!!")
@@ -153,6 +153,9 @@ class SimulatedAnnealing:
                         self.score = candidate_score
                         if self.best_score > self.score:
                             self.best_score = self.score
+                print("Iteração")
+                print(i)
+            print("Temperatura ainda não saiu do while")
                 
         print(self)
         

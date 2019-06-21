@@ -14,7 +14,6 @@ def checkFeasibility(P, s):
             if status and i!=j:
                 feasible = abs(s[i] - s[j]) >= min(P[i], P[j])
                 if not(feasible):
-                    print("Not feasible: ", s[i], s[j], i, j, P[i], P[j])
                     status = False
     return status
 
@@ -35,8 +34,8 @@ def getInitialSolution(P):
         #Transform into feasible solution
         if 2*P[i] > max_gap:
             for j in range(1, len(P)):
-             if s[j] > s[i]:
-                s[j] = s[j] + 2*P[i] - max_gap
+                if s[j] > s[i]:
+                    s[j] = s[j] + 2*P[i] - max_gap
         #continue with the algorithm
         if max_gap == gap1:
             s[i] = s[i-2] + P[i]
@@ -61,10 +60,9 @@ def get_instance(filename):
 def learn() -> list:
         get_instance_on_file = get_instance("instances/trsp_50_1.dat")
         initialSolution = getInitialSolution(get_instance_on_file[1])
-        print(initialSolution[0], initialSolution[1])
         feasibility_status = checkFeasibility(initialSolution[0], initialSolution[1])
         if feasibility_status:
-            sa = SimulatedAnnealing(initialSolution= initialSolution, temperature=100.0, dec_temperature=0.92, num_iterations=3, max_changes=2)
+            sa = SimulatedAnnealing(initialSolution= initialSolution, temperature=100.0, dec_temperature=0.99, num_iterations=100, max_changes=2)
             sa.run()
         else:
             print("ERROR: Initial solution not feasible!!!")
@@ -87,8 +85,8 @@ class SimulatedAnnealing:
         self.max_value = 10;
         self.min_value =  -10;
         self.best_score = None
+        self.best_s_arrangement = None
 
-    #TODO: HEEELP
     #Como função de fitness vou somar a duração das tarefas com a solução dada
     def getFitness(self, P,s):
         sums = []
@@ -130,36 +128,38 @@ class SimulatedAnnealing:
         self.actual_state_copy = self.initial_state 
        
         self.best_score = self.getFitness(self.actual_state_copy[0], self.actual_state_copy[1])
+        self.best_s_arrangement = self.actual_state_copy[1]
         while self.temperature > 0.01:
             self.update_temperature()
             for i in range(self.num_iterations):
+
                 candidate = self.get_random_neighbor(self.actual_state_copy[0].copy(), self.actual_state_copy[1].copy())
-                
+
                 candidate_score = self.getFitness(self.actual_state_copy[0], candidate)
+
                 actual_state_score = self.getFitness(self.actual_state_copy[0], self.actual_state_copy[1])
-                   
+
                 delta = candidate_score - actual_state_score
                 self.score = actual_state_score
 
-                if(delta > 0):
+                if(delta <= 0):
                     self.actual_state_copy = (self.actual_state_copy[0], candidate)
                     self.score = candidate_score
                     if self.best_score > self.score:
                         self.best_score = self.score
+                        self.best_s_arrangement = candidate
                 else:
-                    p = math.exp(delta/self.temperature)
-                    if(random.random() < p):
+                    boltz = math.exp(-float(delta)/self.temperature)
+                    if(random.random() <= boltz):
                         self.actual_state_copy = (self.actual_state_copy[0], candidate)
                         self.score = candidate_score
                         if self.best_score > self.score:
                             self.best_score = self.score
-                print("Iteração")
-                print(i)
-            print("Temperatura ainda não saiu do while")
-                
+                            self.best_s_arrangement = candidate
+
         print(self)
         
     def __str__(self):
-        return 'Estado da solução = \n' + str(["{0:0.2f}".format(i) for i in self.actual_state_copy[1]]) + '\n Valor encontrado para T = \n' + str(self.best_score) + ' \n Solução inicial = \n' +  str(["{0:0.2f}".format(i) for i in self.initial_state[1]]);
+        return 'Solução final = \n' + str(["{0:0.2f}".format(i) for i in self.best_s_arrangement]) + ' \n Solução inicial = \n' +  str(["{0:0.2f}".format(i) for i in self.initial_state[1]]) +  '\n Valor encontrado para T na solução inicial= \n' + str(self.getFitness(self.initial_state[0], self.initial_state[1])) + '\n Valor encontrado para T na solução final= \n' + str(self.best_score);
 
 learn()

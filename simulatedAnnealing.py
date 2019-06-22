@@ -119,39 +119,36 @@ class SimulatedAnnealing:
             #if(changes_list[0] != changes_list[1]):
                 #break
 
-        change1 = neighbor[changes_list[0]]
-        change2 = neighbor[changes_list[1]]
+
         change1_p = P_neighbor[changes_list[0]]
         change2_p = P_neighbor[changes_list[1]]
 
 
-        neighbor[changes_list[0]] = change2
-        neighbor[changes_list[1]] = change1
         P_neighbor[changes_list[0]] = change1_p
         P_neighbor[changes_list[0]] = change2_p
 
 
-        s = [-1] * len(P_neighbor)
+        neighbor = [-1] * len(P_neighbor)
         #Create the first and second si's because they are always the same
         i = 1
-        s[i-1] = 0
-        s[i] = s[i-1] + P_neighbor[i]
+        neighbor[i-1] = 0
+        neighbor[i] = neighbor[i-1] + P_neighbor[i]
         # start algorithm for the rest of the P's list
         for i in range(2, len(P_neighbor)):
-            gap1 = abs(s[i-2] - s[i-1])
-            gap2 = abs((s[i-1] - P_neighbor[i-1]))
+            gap1 = abs(neighbor[i-2] - neighbor[i-1])
+            gap2 = abs((neighbor[i-1] - P_neighbor[i-1]))
             max_gap = max(gap1, gap2)
             #Transform into feasible solution
             if 2*P_neighbor[i] > max_gap:
                 for j in range(1, len(P_neighbor)):
-                 if s[j] > s[i]:
-                    neighbor[j] = s[j] + 2*P_neighbor[i] - max_gap
+                 if neighbor[j] > neighbor[i]:
+                    neighbor[j] = neighbor[j] + 2*P_neighbor[i] - max_gap
             #continue with the algorithm
             if max_gap == gap1:
-                neighbor[i] = s[i-2] + P_neighbor[i]
+                neighbor[i] = neighbor[i-2] + P_neighbor[i]
             else:
-                neighbor[i] = s[i-1] + P_neighbor[i]
-        print(neighbor)
+                neighbor[i] = neighbor[i-1] + P_neighbor[i]
+
         return neighbor
 
 
@@ -191,7 +188,7 @@ class SimulatedAnnealing:
         self.best_score = self.getFitness(self.actual_state_copy[0], self.actual_state_copy[1])
         self.actual_state_score = self.getFitness(self.actual_state_copy[0], self.actual_state_copy[1])
         self.best_s_arrangement = (self.actual_state_copy[0], self.actual_state_copy[1])
-        while self.temperature > 99: # 0.01
+        while self.temperature > 0.01: 
             self.update_temperature()
             for i in range(1):
 
@@ -215,6 +212,7 @@ class SimulatedAnnealing:
                         if self.best_score > self.actual_state_score:
                             self.best_s_arrangement = candidate
                             self.best_score = self.actual_state_score
+        print(checkFeasibility(self.best_s_arrangement[0], self.best_s_arrangement[1]))
 
         print(self)
         
@@ -223,6 +221,6 @@ class SimulatedAnnealing:
             print( '\n Valor encontrado para T na solução final do arquivo' + filename + ' = ' + str(self.best_score) + ' \n', file=text_file)
 
         return 'Solução final = \n' + str(["{0:0.2f}".format(i) for i in self.best_s_arrangement[1]]) + ' \n Solução inicial = \n' +  str(["{0:0.2f}".format(i) for i in self.initial_state[1]]) +  '\n Valor encontrado para T na solução inicial= \n' + str(self.getFitness(self.initial_state[0], self.initial_state[1])) + '\n Valor encontrado para T na solução final= \n' + str(self.best_score);
-for i in ["teste.dat"]:
+for i in ["trsp_50_1.dat"]:
     # for i in range(0, 3):
     learn(i)

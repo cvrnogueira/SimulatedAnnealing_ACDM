@@ -166,9 +166,9 @@ class SimulatedAnnealing:
     def run(self):
         #initial_state: Tuple (P, s)
         self.actual_state_copy = self.initial_state 
-       
         self.best_score = self.getFitness(self.actual_state_copy[0], self.actual_state_copy[1])
-        self.best_s_arrangement = self.actual_state_copy[1]
+        self.actual_state_score = self.getFitness(self.actual_state_copy[0], self.actual_state_copy[1])
+        self.best_s_arrangement = (self.actual_state_copy[0], self.actual_state_copy[1])
         while self.temperature > 0.01:
             self.update_temperature()
             for i in range(self.num_iterations):
@@ -176,29 +176,27 @@ class SimulatedAnnealing:
                 candidate = self.get_random_neighbor_2(self.actual_state_copy[0].copy(), self.actual_state_copy[1].copy())
 
                 candidate_score = self.getFitness(self.actual_state_copy[0], candidate)
-                actual_state_score = self.getFitness(self.actual_state_copy[0], self.actual_state_copy[1])
 
-                delta = candidate_score - actual_state_score
-                self.score = actual_state_score
+                delta = candidate_score - self.actual_state_score
 
                 if(delta <= 0):
                     self.actual_state_copy = (self.actual_state_copy[0], candidate)
-                    self.score = candidate_score
-                    if self.best_score > self.score:
-                        self.best_score = self.score
+                    self.actual_state_score = candidate_score
+                    if self.best_score > self.actual_state_score:
                         self.best_s_arrangement = candidate
+                        self.best_score = self.actual_state_score
                 else:
                     boltz = math.exp(-float(delta)/self.temperature)
                     if(random.random() <= boltz):
                         self.actual_state_copy = (self.actual_state_copy[0], candidate)
                         self.score = candidate_score
-                        if self.best_score > self.score:
-                            self.best_score = self.score
+                        if self.best_score > self.actual_state_score:
                             self.best_s_arrangement = candidate
+                            self.best_score = self.actual_state_score
 
         print(self)
         
     def __str__(self):
-        return 'Solução final = \n' + str(["{0:0.2f}".format(i) for i in self.best_s_arrangement]) + ' \n Solução inicial = \n' +  str(["{0:0.2f}".format(i) for i in self.initial_state[1]]) +  '\n Valor encontrado para T na solução inicial= \n' + str(self.getFitness(self.initial_state[0], self.initial_state[1])) + '\n Valor encontrado para T na solução final= \n' + str(self.best_score);
+        return 'Solução final = \n' + str(["{0:0.2f}".format(i) for i in self.best_s_arrangement[1]]) + ' \n Solução inicial = \n' +  str(["{0:0.2f}".format(i) for i in self.initial_state[1]]) +  '\n Valor encontrado para T na solução inicial= \n' + str(self.getFitness(self.initial_state[0], self.initial_state[1])) + '\n Valor encontrado para T na solução final= \n' + str(self.best_score);
 
 learn()

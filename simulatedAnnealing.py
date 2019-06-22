@@ -4,6 +4,8 @@ import copy
 import math
 from math import sqrt
 from itertools import islice
+from operator import itemgetter
+from numpy.random import random_integers as ri
 
 #Just a function to guide us during development
 #Idea: Test this when we generate neighboards, if is not feasible we brak and give an error
@@ -34,8 +36,8 @@ def getInitialSolution(P):
         #Transform into feasible solution
         if 2*P[i] > max_gap:
             for j in range(1, len(P)):
-                if s[j] > s[i]:
-                    s[j] = s[j] + 2*P[i] - max_gap
+             if s[j] > s[i]:
+                s[j] = s[j] + 2*P[i] - max_gap
         #continue with the algorithm
         if max_gap == gap1:
             s[i] = s[i-2] + P[i]
@@ -62,7 +64,7 @@ def learn() -> list:
         initialSolution = getInitialSolution(get_instance_on_file[1])
         feasibility_status = checkFeasibility(initialSolution[0], initialSolution[1])
         if feasibility_status:
-            sa = SimulatedAnnealing(initialSolution= initialSolution, temperature=100.0, dec_temperature=0.99, num_iterations=100, max_changes=2)
+            sa = SimulatedAnnealing(initialSolution= initialSolution, temperature=100.0, dec_temperature=0.92, num_iterations=30, max_changes=2)
             sa.run()
         else:
             print("ERROR: Initial solution not feasible!!!")
@@ -78,7 +80,7 @@ class SimulatedAnnealing:
         self.dec_temperature = dec_temperature
         self.num_iterations = num_iterations
         self.max_changes = max_changes
-        self.inc_neighbor = 2
+        self.inc_neighbor = 10
         self.initial_state = initialSolution
         self.score = 0;
         self.size = len(initialSolution[0])
@@ -96,6 +98,39 @@ class SimulatedAnnealing:
 
     def update_temperature(self):
         self.temperature *= self.dec_temperature
+
+
+    def get_random_neighbor_2(self, P, current_s):
+        neighbor = current_s
+
+        changes = random.randint(1, self.max_changes) #vejo qual será o número de mudanças
+
+
+        for i in random.sample([x for x in range(0, self.size-1)], changes):  #seleciono os vizinhos aleatórios para a mudança
+
+            while True:
+                perturbation = ri(-self.inc_neighbor,self.inc_neighbor) 
+
+                if perturbation > 0:
+                    perturbation = min(self.max_value, perturbation)
+                else:
+                    perturbation = max(self.min_value, perturbation)
+
+                if neighbor[i] + perturbation >= 0:
+
+                    neighbor[i] += perturbation
+                    break
+
+        for i in range(2, len(P)):
+            gap1 = abs(neighbor[i-2] - neighbor[i-1])
+            gap2 = abs((neighbor[i-1] - P[i-1]))
+            max_gap = max(gap1, gap2)
+            #Transform into feasible solution
+            if 2*P[i] > max_gap:
+                for j in range(1, len(P)):
+                    if neighbor[j] > neighbor[i]:
+                        neighbor[j] = neighbor[j] + 2*P[i] - max_gap
+        return neighbor
 
 
     def get_random_neighbor(self, P, current_s):
@@ -138,11 +173,10 @@ class SimulatedAnnealing:
             self.update_temperature()
             for i in range(self.num_iterations):
 
-                candidate = self.get_random_neighbor(self.actual_state_copy[0].copy(), self.actual_state_copy[1].copy())
+                candidate = self.get_random_neighbor_2(self.actual_state_copy[0].copy(), self.actual_state_copy[1].copy())
 
                 candidate_score = self.getFitness(self.actual_state_copy[0], candidate)
                 actual_state_score = self.getFitness(self.actual_state_copy[0], self.actual_state_copy[1])
-
 
                 delta = candidate_score - actual_state_score
                 self.score = actual_state_score

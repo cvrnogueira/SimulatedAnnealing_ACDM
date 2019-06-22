@@ -123,7 +123,7 @@ class SimulatedAnnealing:
                     neighbor[i] += perturbation
                     break
 
-        for i in range(2, len(P)):
+        for i in range(0, len(P)):
             gap1 = abs(neighbor[i-2] - neighbor[i-1])
             gap2 = abs((neighbor[i-1] - P[i-1]))
             max_gap = max(gap1, gap2)

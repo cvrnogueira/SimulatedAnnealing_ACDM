@@ -4,6 +4,7 @@ import copy
 import math
 from math import sqrt
 from itertools import islice
+from operator import itemgetter
 
 #Just a function to guide us during development
 #Idea: Test this when we generate neighboards, if is not feasible we brak and give an error
@@ -22,25 +23,33 @@ def getInitialSolution(P):
     P.sort(reverse=True)
     #start s array with -1
     s = [-1] * len(P)
-    #Create the first and second si's because they are always the same
-    i = 1
-    s[i-1] = 0
-    s[i] = s[i-1] + P[i]
+    gap_list = []
+    #Create the first s[i]
+    s[0] = 0
     # start algorithm for the rest of the P's list
-    for i in range(2, len(P)):
+    for i in range(1, len(P)):
         gap1 = abs(s[i-2] - s[i-1])
-        gap2 = abs((s[i-1] - P[i-1]))
-        max_gap = max(gap1, gap2)
+        gap1_ini = s[i-2]
+
+        gap2 = abs(s[i-1] - (s[i-1] + P[i-1]))
+        gap2_ini = s[i-1]
+
+        gap_list.append((gap1, gap1_ini))
+        gap_list.append((gap2, gap2_ini))
+
+        chosen_gap = max(gap_list, key=itemgetter(0))
+
+        gap_list.remove(chosen_gap)
+
+
+        s[i] = chosen_gap[1] + P[i]
+
         #Transform into feasible solution
-        if 2*P[i] > max_gap:
+        if 2*P[i] > chosen_gap[0]:
             for j in range(1, len(P)):
                 if s[j] > s[i]:
-                    s[j] = s[j] + 2*P[i] - max_gap
-        #continue with the algorithm
-        if max_gap == gap1:
-            s[i] = s[i-2] + P[i]
-        else:
-            s[i] = s[i-1] + P[i]
+                    s[j] = s[j] + (2*P[i] - chosen_gap[0])
+    print(P, s)
     return (P,s)
 
 def get_instance(filename):
@@ -58,7 +67,7 @@ def get_instance(filename):
     return int(instance_line_1[0]), weights
 
 def learn() -> list:
-        get_instance_on_file = get_instance("instances/trsp_50_1.dat")
+        get_instance_on_file = get_instance("instances/teste.dat")
         initialSolution = getInitialSolution(get_instance_on_file[1])
         feasibility_status = checkFeasibility(initialSolution[0], initialSolution[1])
         if feasibility_status:
@@ -142,7 +151,6 @@ class SimulatedAnnealing:
 
                 candidate_score = self.getFitness(self.actual_state_copy[0], candidate)
                 actual_state_score = self.getFitness(self.actual_state_copy[0], self.actual_state_copy[1])
-
 
                 delta = candidate_score - actual_state_score
                 self.score = actual_state_score

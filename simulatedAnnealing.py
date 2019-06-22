@@ -21,8 +21,9 @@ def checkFeasibility(P, s):
 
 def getInitialSolution(P):
     #Add descending order because we think this way the initial solution will be better
-    P.sort(reverse=True)
+    #P.sort(reverse=True)
     #start s array with -1
+
     s = [-1] * len(P)
     #Create the first and second si's because they are always the same
     i = 1
@@ -43,7 +44,7 @@ def getInitialSolution(P):
             s[i] = s[i-2] + P[i]
         else:
             s[i] = s[i-1] + P[i]
-    return (P,s)
+    return (P, s)
 
 def get_instance(filename):
     file = open(filename, 'r')
@@ -66,7 +67,7 @@ def learn(i) -> list:
         initialSolution = getInitialSolution(get_instance_on_file[1])
         feasibility_status = checkFeasibility(initialSolution[0], initialSolution[1])
         if feasibility_status:
-            sa = SimulatedAnnealing(initialSolution= initialSolution, temperature=100.0, dec_temperature=0.92, num_iterations=30, max_changes=2)
+            sa = SimulatedAnnealing(initialSolution= initialSolution, temperature=100.0, dec_temperature=0.92, num_iterations=100, max_changes=2)
             sa.run()
         else:
             print("ERROR: Initial solution not feasible!!!")
@@ -102,36 +103,55 @@ class SimulatedAnnealing:
         self.temperature *= self.dec_temperature
 
 
-    def get_random_neighbor_2(self, P, current_s):
+    def get_random_neighbor_2(self, current_P, current_s):
         neighbor = current_s
+        P_neighbor = current_P
+        #List that the index that are going to change in this iteraction will be stored
+        changes_list = []
 
-        changes = random.randint(1, self.max_changes) #vejo qual será o número de mudanças
+        #changes = random.randint(1, self.max_changes) #vejo qual será o número de mudanças
+
+        #Emulating do-while in python:
+        
+        #while True:
+        for i in random.sample([x for x in range(0, self.size-1)], self.max_changes):  #seleciono os vizinhos aleatórios para a mudança
+            changes_list.append(i)
+            #if(changes_list[0] != changes_list[1]):
+                #break
+
+        change1 = neighbor[changes_list[0]]
+        change2 = neighbor[changes_list[1]]
+        change1_p = P_neighbor[changes_list[0]]
+        change2_p = P_neighbor[changes_list[1]]
 
 
-        for i in random.sample([x for x in range(0, self.size-1)], changes):  #seleciono os vizinhos aleatórios para a mudança
+        neighbor[changes_list[0]] = change2
+        neighbor[changes_list[1]] = change1
+        P_neighbor[changes_list[0]] = change1_p
+        P_neighbor[changes_list[0]] = change2_p
 
-            while True:
-                perturbation = ri(-self.inc_neighbor,self.inc_neighbor) 
 
-                if perturbation > 0:
-                    perturbation = min(self.max_value, perturbation)
-                else:
-                    perturbation = max(self.min_value, perturbation)
-
-                if neighbor[i] + perturbation >= 0:
-
-                    neighbor[i] += perturbation
-                    break
-
-        for i in range(0, len(P)):
-            gap1 = abs(neighbor[i-2] - neighbor[i-1])
-            gap2 = abs((neighbor[i-1] - P[i-1]))
+        s = [-1] * len(P_neighbor)
+        #Create the first and second si's because they are always the same
+        i = 1
+        s[i-1] = 0
+        s[i] = s[i-1] + P_neighbor[i]
+        # start algorithm for the rest of the P's list
+        for i in range(2, len(P_neighbor)):
+            gap1 = abs(s[i-2] - s[i-1])
+            gap2 = abs((s[i-1] - P_neighbor[i-1]))
             max_gap = max(gap1, gap2)
             #Transform into feasible solution
-            if 2*P[i] > max_gap:
-                for j in range(1, len(P)):
-                    if neighbor[j] > neighbor[i]:
-                        neighbor[j] = neighbor[j] + 2*P[i] - max_gap
+            if 2*P_neighbor[i] > max_gap:
+                for j in range(1, len(P_neighbor)):
+                 if s[j] > s[i]:
+                    neighbor[j] = s[j] + 2*P_neighbor[i] - max_gap
+            #continue with the algorithm
+            if max_gap == gap1:
+                neighbor[i] = s[i-2] + P_neighbor[i]
+            else:
+                neighbor[i] = s[i-1] + P_neighbor[i]
+        print(neighbor)
         return neighbor
 
 
@@ -171,9 +191,9 @@ class SimulatedAnnealing:
         self.best_score = self.getFitness(self.actual_state_copy[0], self.actual_state_copy[1])
         self.actual_state_score = self.getFitness(self.actual_state_copy[0], self.actual_state_copy[1])
         self.best_s_arrangement = (self.actual_state_copy[0], self.actual_state_copy[1])
-        while self.temperature > 0.01:
+        while self.temperature > 99: # 0.01
             self.update_temperature()
-            for i in range(self.num_iterations):
+            for i in range(1):
 
                 candidate = (self.actual_state_copy[0], self.get_random_neighbor_2(self.actual_state_copy[0].copy(), self.actual_state_copy[1].copy()))
 
@@ -203,6 +223,6 @@ class SimulatedAnnealing:
             print( '\n Valor encontrado para T na solução final do arquivo' + filename + ' = ' + str(self.best_score) + ' \n', file=text_file)
 
         return 'Solução final = \n' + str(["{0:0.2f}".format(i) for i in self.best_s_arrangement[1]]) + ' \n Solução inicial = \n' +  str(["{0:0.2f}".format(i) for i in self.initial_state[1]]) +  '\n Valor encontrado para T na solução inicial= \n' + str(self.getFitness(self.initial_state[0], self.initial_state[1])) + '\n Valor encontrado para T na solução final= \n' + str(self.best_score);
-for i in ["trsp_50_1.dat", "trsp_50_2.dat"]:
+for i in ["teste.dat"]:
     # for i in range(0, 3):
     learn(i)

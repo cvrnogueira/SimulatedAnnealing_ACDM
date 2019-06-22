@@ -5,6 +5,7 @@ import math
 from math import sqrt
 from itertools import islice
 from operator import itemgetter
+from numpy.random import random_integers as ri
 
 #Just a function to guide us during development
 #Idea: Test this when we generate neighboards, if is not feasible we brak and give an error
@@ -23,33 +24,25 @@ def getInitialSolution(P):
     P.sort(reverse=True)
     #start s array with -1
     s = [-1] * len(P)
-    gap_list = []
-    #Create the first s[i]
-    s[0] = 0
+    #Create the first and second si's because they are always the same
+    i = 1
+    s[i-1] = 0
+    s[i] = s[i-1] + P[i]
     # start algorithm for the rest of the P's list
-    for i in range(1, len(P)):
+    for i in range(2, len(P)):
         gap1 = abs(s[i-2] - s[i-1])
-        gap1_ini = s[i-2]
-
-        gap2 = abs(s[i-1] - (s[i-1] + P[i-1]))
-        gap2_ini = s[i-1]
-
-        gap_list.append((gap1, gap1_ini))
-        gap_list.append((gap2, gap2_ini))
-
-        chosen_gap = max(gap_list, key=itemgetter(0))
-
-        gap_list.remove(chosen_gap)
-
-
-        s[i] = chosen_gap[1] + P[i]
-
+        gap2 = abs((s[i-1] - P[i-1]))
+        max_gap = max(gap1, gap2)
         #Transform into feasible solution
-        if 2*P[i] > chosen_gap[0]:
+        if 2*P[i] > max_gap:
             for j in range(1, len(P)):
-                if s[j] > s[i]:
-                    s[j] = s[j] + (2*P[i] - chosen_gap[0])
-    print(P, s)
+             if s[j] > s[i]:
+                s[j] = s[j] + 2*P[i] - max_gap
+        #continue with the algorithm
+        if max_gap == gap1:
+            s[i] = s[i-2] + P[i]
+        else:
+            s[i] = s[i-1] + P[i]
     return (P,s)
 
 def get_instance(filename):
@@ -67,11 +60,11 @@ def get_instance(filename):
     return int(instance_line_1[0]), weights
 
 def learn() -> list:
-        get_instance_on_file = get_instance("instances/teste.dat")
+        get_instance_on_file = get_instance("instances/trsp_50_1.dat")
         initialSolution = getInitialSolution(get_instance_on_file[1])
         feasibility_status = checkFeasibility(initialSolution[0], initialSolution[1])
         if feasibility_status:
-            sa = SimulatedAnnealing(initialSolution= initialSolution, temperature=100.0, dec_temperature=0.99, num_iterations=100, max_changes=2)
+            sa = SimulatedAnnealing(initialSolution= initialSolution, temperature=100.0, dec_temperature=0.92, num_iterations=30, max_changes=2)
             sa.run()
         else:
             print("ERROR: Initial solution not feasible!!!")
@@ -87,7 +80,7 @@ class SimulatedAnnealing:
         self.dec_temperature = dec_temperature
         self.num_iterations = num_iterations
         self.max_changes = max_changes
-        self.inc_neighbor = 2
+        self.inc_neighbor = 10
         self.initial_state = initialSolution
         self.score = 0;
         self.size = len(initialSolution[0])
@@ -105,6 +98,39 @@ class SimulatedAnnealing:
 
     def update_temperature(self):
         self.temperature *= self.dec_temperature
+
+
+    def get_random_neighbor_2(self, P, current_s):
+        neighbor = current_s
+
+        changes = random.randint(1, self.max_changes) #vejo qual será o número de mudanças
+
+
+        for i in random.sample([x for x in range(0, self.size-1)], changes):  #seleciono os vizinhos aleatórios para a mudança
+
+            while True:
+                perturbation = ri(-self.inc_neighbor,self.inc_neighbor) 
+
+                if perturbation > 0:
+                    perturbation = min(self.max_value, perturbation)
+                else:
+                    perturbation = max(self.min_value, perturbation)
+
+                if neighbor[i] + perturbation >= 0:
+
+                    neighbor[i] += perturbation
+                    break
+
+        for i in range(2, len(P)):
+            gap1 = abs(neighbor[i-2] - neighbor[i-1])
+            gap2 = abs((neighbor[i-1] - P[i-1]))
+            max_gap = max(gap1, gap2)
+            #Transform into feasible solution
+            if 2*P[i] > max_gap:
+                for j in range(1, len(P)):
+                    if neighbor[j] > neighbor[i]:
+                        neighbor[j] = neighbor[j] + 2*P[i] - max_gap
+        return neighbor
 
 
     def get_random_neighbor(self, P, current_s):
@@ -147,7 +173,7 @@ class SimulatedAnnealing:
             self.update_temperature()
             for i in range(self.num_iterations):
 
-                candidate = self.get_random_neighbor(self.actual_state_copy[0].copy(), self.actual_state_copy[1].copy())
+                candidate = self.get_random_neighbor_2(self.actual_state_copy[0].copy(), self.actual_state_copy[1].copy())
 
                 candidate_score = self.getFitness(self.actual_state_copy[0], candidate)
                 actual_state_score = self.getFitness(self.actual_state_copy[0], self.actual_state_copy[1])

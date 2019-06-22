@@ -59,8 +59,10 @@ def get_instance(filename):
 
     return int(instance_line_1[0]), weights
 
-def learn() -> list:
-        get_instance_on_file = get_instance("instances/trsp_50_1.dat")
+def learn(i) -> list:
+        global filename
+        filename = i
+        get_instance_on_file = get_instance("instances/" + filename)
         initialSolution = getInitialSolution(get_instance_on_file[1])
         feasibility_status = checkFeasibility(initialSolution[0], initialSolution[1])
         if feasibility_status:
@@ -173,14 +175,14 @@ class SimulatedAnnealing:
             self.update_temperature()
             for i in range(self.num_iterations):
 
-                candidate = self.get_random_neighbor_2(self.actual_state_copy[0].copy(), self.actual_state_copy[1].copy())
+                candidate = (self.actual_state_copy[0], self.get_random_neighbor_2(self.actual_state_copy[0].copy(), self.actual_state_copy[1].copy()))
 
-                candidate_score = self.getFitness(self.actual_state_copy[0], candidate)
+                candidate_score = self.getFitness(self.actual_state_copy[0], candidate[1])
 
                 delta = candidate_score - self.actual_state_score
 
                 if(delta <= 0):
-                    self.actual_state_copy = (self.actual_state_copy[0], candidate)
+                    self.actual_state_copy = (self.actual_state_copy[0],  candidate[1])
                     self.actual_state_score = candidate_score
                     if self.best_score > self.actual_state_score:
                         self.best_s_arrangement = candidate
@@ -188,7 +190,7 @@ class SimulatedAnnealing:
                 else:
                     boltz = math.exp(-float(delta)/self.temperature)
                     if(random.random() <= boltz):
-                        self.actual_state_copy = (self.actual_state_copy[0], candidate)
+                        self.actual_state_copy = (self.actual_state_copy[0],  candidate[1])
                         self.score = candidate_score
                         if self.best_score > self.actual_state_score:
                             self.best_s_arrangement = candidate
@@ -197,9 +199,10 @@ class SimulatedAnnealing:
         print(self)
         
     def __str__(self):
-        with open("Output.txt", "w") as text_file:
-            print( '\n Valor encontrado para T na solução final= \n' + str(self.best_score), file=text_file)
+        with open("Output.txt", "a+") as text_file:
+            print( '\n Valor encontrado para T na solução final do arquivo' + filename + ' = ' + str(self.best_score) + ' \n', file=text_file)
 
         return 'Solução final = \n' + str(["{0:0.2f}".format(i) for i in self.best_s_arrangement[1]]) + ' \n Solução inicial = \n' +  str(["{0:0.2f}".format(i) for i in self.initial_state[1]]) +  '\n Valor encontrado para T na solução inicial= \n' + str(self.getFitness(self.initial_state[0], self.initial_state[1])) + '\n Valor encontrado para T na solução final= \n' + str(self.best_score);
-
-learn()
+for i in ["trsp_50_1.dat", "trsp_50_2.dat"]:
+    # for i in range(0, 3):
+    learn(i)

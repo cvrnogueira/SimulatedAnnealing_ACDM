@@ -1,0 +1,376 @@
+\documentclass[a4paper]{article}
+
+\usepackage{fullpage} % Package to use full page
+\usepackage{tikz} % Package for drawing
+\usepackage{amsmath}
+\usepackage{verbatim}
+\usepackage{subfig}
+\usepackage{mathtools}
+\usepackage{amssymb}
+\usepackage{flafter}
+\usepackage{hyperref}
+\usepackage[portuges]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
+
+\title{INF05010 Otimização Combinatória\\
+Trabalho Final:\\
+Trabalho Final: Algoritmo Simulated Annealing para resolução do agendamento com distâncias mínimas}
+\author{Catarina Nogueira e Eduardo Guerra}
+\date{Junho de 2019}
+
+\begin{document}
+
+\maketitle
+
+\section{Introdução}
+
+Este trabalho tem como objetivo implementar uma meta-heurística para resolver o problema de agendamentos de tarefas com distâncias mínimas, que aceita possível sobreposição de tarefas.
+A meta-heurística escolhida foi um algoritmo empírico, o Simulated Annealing, cujos detalhes serão expandidos na seção 3.
+
+ O problema de agendamentos mínimos é definido como segue: dado um conjunto P de tarefas $n \in N$, cada uma com um tempo de processamento, deve-se achar um agendamento da execução de tarefas tal que a duração total 
+ $makespan$ onde $makespan = min_{i \in N}s_i+p_i$ é minimizada.  
+
+O problema é conhecidamente $NP\text{-Difícil}$.
+
+\section{Formulação do ACDM como Programa Inteiro}
+  
+\textbf{Variáveis: } $x_{ij} \in \{0, 1\} \quad \forall\ i,j \in N$ onde: \[ x_{ij} =
+  \begin{cases}
+    0       & \quad \text{Caso} \ si \geqslant sj \  i,j \in N \\
+    1  & \quad \text{Caso contrário.}
+  \end{cases}
+\]
+
+ \begin{equation*}
+  x_{ij} = 
+  \min_{\forall i,j \in n} (p_i, p_j)
+  \end{equation*}
+
+\begin{equation*}
+    M = \sum_{i=1}^{n} p_i +  x_{ij} \ i,j \in N \\
+  \end{equation*}
+ 
+\textbf{Função Objetivo:}\\
+\begin{equation*}
+\text{min} \text{  } T 
+\end{equation*}
+\textbf{Restrições:}\\
+\begin{equation}
+\begin{aligned}
+ s_i \geqslant  x_{ij} + s_j - M(1 - dij)  \quad { \forall i,j \in n} \\
+\end{aligned}     
+\end{equation}
+
+\begin{equation}
+\begin{aligned}
+x_{ij} +  x_{ji} = 1  { \forall i,j \in n} \\
+\end{aligned}
+\end{equation}
+
+\begin{equation}
+\begin{aligned}
+    T \geqslant 0 \\
+\end{aligned}
+\end{equation}
+ 
+\begin{equation}
+\begin{aligned}
+     s_{i} \geqslant 0 \quad \forall\ i \in N 
+\end{aligned}
+\end{equation}
+
+A restrição (1) garante que $ |s_i - s_j| \geqslant \quad \min_(si, sj) \forall\ i,j \in N$. Nesta restrição, caso um vértice $i \in N$ não foi selecionado($x_{ij} = 0$),  somamos uma constante M, tão grande quanto necessário.
+
+A restrição (2) garante que haja exatamente uma escolha de alocação de tarefas
+
+As restrições (3) e (4) definem o domínio das variáveis.
+
+\section{O Algoritmo Simulated Annealing}
+Para a resolução do problema do agendamento da execução das tarefas foram definidos os seguintes elementos para o algoritmo escolhido, o Simulated Annealing. \par
+
+
+\textbf{P}:  Pi os tempos de execução de cada tarefa i $i \in N$, ordenados em ordem decrescente \par
+\textbf{s}: si os tempos de início de cada tarefa i, $i \in N$. 
+
+\subsection{Parâmetros}
+
+Os seguintes parâmetros foram levados em consideração na implementação do algoritmo:
+
+\textbf{solução\_atual }: A Solução Inicial de entrada para o algoritmo. É uma tupla (P, s)
+
+
+\textbf{temperatura\_atual }: Probabilidade inicial do algoritmo (Temperatura Inicial) que é atualizada a cada iteração
+
+
+\textbf{temperatura\_final}: Probabilidade final para o critério de parada (Temperatura Final)
+
+
+\textbf{Decaimento da temperatura}: Fator de resfriamento. É um número real pertencente à [0, 1]
+
+
+\textbf{numero\_de\_iterações}: Número inteiro representando o número de iterações que o algoritmo faz a cada decaimento de temperatura
+
+\textbf{numero\_de\_mudanças}:  Número inteiro que representa o máximo de mudanças entre [0, n], sendo P pertencente à n, representando o número de vizinhos que serão modificados a cada iteração.
+
+\textbf{maxi\_without\_improv}: Número inteiro que representa o número de soluções sem melhoria aceita para que se encerre o algoritmo.
+
+\subsection{Pseudocódigo}
+
+\begin{algorithm}
+\begin{algorithmic}[1]
+\Function{SA\_ACDM}{$\vars{temperatura\_atual}, \vars{temperatura\_final}, \vars{num\_iterations}, \vars{maxi\_without\_improv}$}
+\State $\textit{solução\_atual} \gets \text{soluçãoInicial() }$
+\State $\textit{score\_atual} \gets \text{fitness(solução\_atual) }$
+\State $\textit{melhor\_solucao} \gets \text{score\_atual}$
+\State $\textit{stop} \gets \text{False}$
+\While {$  \text{(} \textit{temperatura\_atual} > \text{temperatura\_final} \text{) and not(stop)}   $}
+    \State $\textit{sols\_without\_improv} \gets \text{0}$
+    \State $\textit{atualizaTemperatura()}$
+    \For{\textit{iteração} in \textit{numero\_de\_iterações}}
+        \State $\textit{candidato} \gets \text{geraVizinhos(\textit{solução\_atual)}}$
+        \State $\textit{score\_candidato} \gets \text{fitness(\textit{candidato)}}$
+        \State $\textit{delta} \gets \text{score\_candidato - score\_atual}$
+        \If {$\text{delta} \leqslant \textit{0}$}
+            \State $\textit{solução\_atual} \gets \text{candidato}$
+            \State $\textit{score\_atual} \gets \text{score\_candidato}$
+            \State $\textit{sols\_without\_improv} \gets \text{sols\_without\_improv + 1}$
+            \If {$\text{melhor\_score} > \textit{score\_atual}$}
+                \State $\textit{melhor\_solucao} \gets \text{candidato}$
+                \State $\textit{melhor\_score} \gets \text{score\_atual}$
+                \State $\textit{sols\_without\_improv} \gets \text{0}$
+            \EndIf
+        
+        \Else
+            \State $\textit{boltz} \gets \exp{(-delta/temperatura\_atual)}$
+            \If{$\text{random[0, 1)} \geqslant {boltz}$}
+            \State $\textit{solução\_atual} \gets \text{candidato}$
+            \State $\textit{score\_atual} \gets \text{score\_candidato}$
+            \State $\textit{sols\_without\_improv} \gets \text{sols\_without\_improv + 1}$
+                \If {$\text{melhor\_score} > \textit{score\_atual}$}
+                    \State $\textit{melhor\_solucao} \gets \text{candidato}$
+                    \State $\textit{melhor\_score} \gets \text{score\_atual}$
+                    \State $\textit{sols\_without\_improv} \gets \text{0}$
+                \EndIf
+            \EndIf
+        \EndIf
+        \If {$\text{sols\_without\_improv} \geqslant \textit{maxi\_without\_improv}$}
+            \State $\textit{stop} \gets \text{True}$
+             \State $\text{break}$
+        \EndIf
+    \EndFor
+\EndWhile
+\State \Return $\vars{melhor\_solucao}$
+ \EndFunction
+\end{algorithmic}
+\caption{Algoritmo Simulated Annealing para o problema ACDM}\label{euclid}
+\end{algorithm}
+
+\subsection{Geração da Solução Inicial}
+A \textit{solução\_atual} é gerada por meio de um algoritmo guloso que gera soluções factíveis. \par
+O algoritmo lê o arquivo de entrada com os N tempos P de execução de cada processo e os coloca em uma lista l, $|l| \in N$. \par
+Depois disso ele cria uma lista s iniciada com -1 para todos os elementos, $|s| \in N$. \par
+O objetivo é popular essa lista s com os tempos de início factiveis de cada processo em P, e devolver uma tupla $(P, s) \in N$. \par
+Pra tal é definido que o processo 1, $P[0]$, tem seu tempo de início $s[0]$ em zero. 
+Também é definido a ideia de gaps: os gaps são o que, ao inserir um novo processo k, sobra de espaço do tempo de inicio do processo k-1 até o processo k, e do tempo de término do processo k até o tempo de término do primeiro processo maior que k. \par
+Então, todos os processos $i = [2,...n]$ são colocados no maior gap que o processo anterior deixou. Se ocorrei empate entre gaps, o algoritmo escolhe o primeiro.
+Logo, dado que o gap escolhido para o processo $P[i]$ começa no tempo $s[i]$, o processo que vai nesse gap tem como tempo de início de execução: $s[i] + P[i]$.
+Para manter a factibilidade, dado que o gap escolhido tem tamanho y, e o processo que foi alocado no gap é k, se 2*p[k] for maior do que y, todos os processos com s[i] > s[k] precisam ser ‘Empurrados’ para manter a factibilidade das inserções sub-seguintes, logo, o ‘fator de empurrão’ é $2*p[k] - y$. \par
+Exemplo com $P = [10, 7, 4]$:
+O algoritmo vai alocar $P= [10, 7, 4]$ em $s = [0, 7, 4]$, porém isso não respeita a regra de factibilidade de $ |s_i - s_j| \geqslant \quad \min_(si, sj) \forall\ i,j \in N$ para um dos elementos do conjunto, pois $| 4 - 7| \geqslant \min(7, 4) $ é falso. \par
+Logo, com o fator de empurrão temos $P= [10, 7, 4]$ em $s = [0, 8, 4]$, voltando à factibilidade pois $| 4 - 8| \geqslant \min(8, 4) $ é verdadeiro 
+
+
+\subsection{Método de Geração de vizinhos}
+É escolhido dois elementos aleatórios para trocarem de posição, em uma ideia de 2-exchange vista em aula. Após a troca desses dois elementos é necessário recalcular os tempos de início de execução para cada tupla do problema, pois além de a troca não manter factibilidade das soluções, sem recalcular os tempos de início de execução a solução ficaria igual. \par
+Esse recalculo de tempo de início é feito exatamente como é feito a geração de solução inicial, explicada na sessão 3.3
+
+\subsection{Atualização da temperatura}
+A temperatura, após testes que serão discutidos na sessão ???, é atualizada com fator de decaimento de 0.92. Ela é atualizada a cada 100 iterações do algoritmo, decisão que também é discutida na sessão ???
+
+\subsection{Critério de Parada}
+O algoritmo para sua execução, retornando a melhor solução encontrada até o momento, caso sua temperatura fique menor do que 0.01
+
+\section{Implementação}
+
+Todo código criado e utilizado na realização desse trabalho se encontra disponível em \url{https://github.com/cvrnogueira/SimulatedAnnealing_ACDM}.
+
+\subsection{Plataforma}
+
+O trabalho foi implementado e testado em duas máquinas, uma com sistema operacional Windows 7(64-bit), com um processador Intel(R) Core(TM) i5-3570K CPU, com  acesso a 2 núcleos físicos de 3.40GHz, com cache L2 de 1MB e 8GB de memória RAM. \par
+A outra máquina tem sistema operacional Windows 10(64-bit), com um processador Intel(R) Core(TM) i7-7500 CPU, com acesso a 4 núcleos físicos de 3.40GHz, com cache L2 de 1MB e 8GB de memória.
+\par
+A linguagem de programação utilizada foi Python 3.5.3.
+
+\subsection{Estruturas de Dados}
+
+A instância é representada por uma lista de tuplas de inteiros $(P, s)$, com $|P| \in N$ e com $|s| \in N$.
+O primeiro elemento da tupla são os tempos de execução de cada tarefa ordenado pela ordem de execução. \par
+O segundo elemento da tupla são os tempos de início de execução da tarefa do primeiro elemento da tupla. \par
+A solução consiste em um número inteiro que é o makespan $min_{i \in N}s_i+p_i$ da solução.
+
+\subsection{Função de Fitness}
+
+O fitness da tupla de inteiros $(P, s)$, que representa uma possível solução, é o cálculo do makespan para aquela solução:
+$min_{i \in N}s_i+p_i$, logo, é percorrido elemento à elemento da tupla, somando os dois elemementos $(P[i] +  s[i])$.
+Se a solução não é factível é retornado o valor +infinito.
+Como é percorrer uma lista de tuplas, o cálculo de fitness da solução tem complexidade $O(|N|)$.
+
+\section{Testes dos Parâmetros}
+
+Nos seguintes testes, variou-se os parâmetros do algoritmo Simulated Annealing separadamente para determinar os melhores valores. Cada teste foi executado 3 a 5 vezes na instância trsp\_100\_4.dat.Essa foi a escolhida por ser uma instância que executa em um tempo razoável e que possui valor de intermediário de itens entre as outras instâncias. Foi medido para cada teste o desvio padrão médio em relação ao best-known value(BKV) e para alguns testes de parâmetros foi feito o tempo de execução médio entre as execuções. Para as análises de teste de parâmetros não foi feito cortes caso o algoritmo fique mais de x iterações sem melhorar sua solução. Ele executa até parar pelo teste de atingira temperatura final.
+
+\subsection{Teste do Parâmetro Decaimento da temperatura: \textit{dec\_temperature}}
+
+O valor de \textit{dec\_temperature} foi variado em: 0.6, 0.8, 0.92, 0.96, e 0.99 sendo o número de iterações fixo em 100 e  a temperatura final em 0.01. As Figuras 1 e 2 mostram os resultados.
+
+\begin{figure}[H]%
+    \centering
+    \subfloat{{\includegraphics[width=10cm, height=8.5cm]{decTemperature.png} }}%
+    \caption{Variação do parâmetro \textit{dec\_temperature}}%
+    \label{fig:example}%
+\end{figure}
+
+\begin{figure}[H]%
+    \centering
+    \subfloat{{\includegraphics[width=15cm, height=10cm]{tempoExecu.png} }}%
+    \caption{Variação do tempo de execução em relação ao \textit{dec\_temperature} }%
+    \label{fig:example}%
+\end{figure}
+
+
+Este parâmetro demonstrou ser um dos mais importantes do algoritmo uma vez que o aprendizado é muito melhor ao escolher o parâmetro com valor 0.96.
+
+\subsection{Teste do Parâmetro \textit{numero\_iterações}}
+
+O valor do parâmetro \textit{numero\_iterações} foi variado de 50, 100, 200 e 300. Para esse teste a dec\_temperature ficou fixa em 0.96 e a temperatura final em 0.01. As Figuras 3  mostra os resultados.
+
+\begin{figure}[H]%
+    \centering
+    \subfloat{{\includegraphics[width=10cm, height=8.5cm]{numeroExecucao.png} }}%
+    \caption{Variação do parâmetro \textit{numero\_iterações}}%
+    \label{fig:example}%
+\end{figure}
+
+Analisando a figura 3, é simples notar que a partir de 200 iterações os resultados não obtém melhora considerável, e, pelo tempo que demora aumentar o número de iterações, não valeria a pena deixar em 300, que é a maior. Logo, a escolha foi para 200 iterações.
+
+\subsection{Teste do Parâmetro \textit{temperatura\_final}}
+
+O valor do parâmetro \textit{temperatura\_final} foi testado como 1, 0.1 e 0.01. Para esses testes a dec\_temperature ficou fixa em 0.96 e o numero\_iterações em 100. A Figura 5 mostra os resultados.
+
+\begin{figure}[H]%
+    \centering
+    \includegraphics[width=10cm, height=8.5cm]{finalTemperature}%
+    \caption{Variação do parâmetro \textit{temperatura\_final}}%
+    \label{fig:example}%
+\end{figure}
+
+\begin{figure}[H]%
+    \centering
+    \includegraphics[width=10cm, height=8.5cm]{finalTemperatureTime}%
+    \caption{Variação do tempo de execução em relação à \textit{temperatura\_final}}%
+    \label{fig:example}%
+\end{figure}
+
+Com base nos resultados, percebe-se que o parâmetro 1 ainda não é muito bom para temperatura final, porém 0,1 e 0.01 atingiram resultados muito parecidos em média. Como o tempo entre os dois é próximo, a decisão foi de deixar 0.01 e trabalhar no corte de soluções depois de x interações sem melhorias, que é discutido na sessão 5.3.
+
+
+\subsection{Teste do Parâmetro \textit{maxi\_without\_improv}}
+
+Esse parâmetro foi testado 10, 20, 30, 40 e 50.
+Para esses testes a dec\_temperature ficou fixa em 0.96, o numero\_iterações em 100 e a temperatura\_final em 0.01.  Em nenhum dos testes de parâmetros anteriores tinha sido considerado o corte de soluções após x iterações sem melhora.
+A Figura 6 mostra os resultados. 
+
+\begin{figure}[H]%
+    \centering
+    \includegraphics[width=10cm, height=8.5cm]{nonImprovingSol}%
+    \caption{Variação do parâmetro \textit{maxi\_without\_improv}}%
+    \label{fig:example}%
+\end{figure}
+
+Para variações de 40 e 50 não se obteve diferença no resultado, portando a escolha foi para o parâmetro 40.
+
+
+
+\section{Testes das Instâncias}
+
+As instâncias testadas nesse trabalho foram as disponíveis em \url{ http://www.inf.ufrgs.br/~mrpritt/oc/trsp.zip}. Todas possuem na primeira linha o número de linhas do arquivo, e, nas demais linhas, o tempo de execução de cada tarefa. Para cada instância, comparou-se o BKV com os resultados obtidos via solver e via algoritmo Simulated Annealing com a melhor configuração obtida nos testes dos parâmetros.
+
+\subsection{Execução com o Solver GLPK}
+Os seguintes testes das instâncias, após formuladas como programas inteiros, foram executadas no solver GLPK com um tempo limite de 2 horas para as instâncias de tamanho 50 e 100 e 3 horas para as instâncias de tamanho 1000. 
+. O objetivo é comparar os resultados obtidos pelo algoritmo Simulated Annelaing com os obtidos via solver. A Tabela 1 mostra os resultados.
+
+\begin{table}[H]
+\centering
+\caption{Resultados com o solver CPLEX}
+\label{my-label}
+\begin{tabular}{|l|r|r|r|}
+\hline
+Instância    & \multicolumn{1}{l|}{BKV} & \multicolumn{1}{l|}{Valor Obtido} & \multicolumn{1}{l|}{Desvio para Referência (\%)} \\ \hline
+mdmt39.112.A & 5935                     & 5157                              & 13.11                                            \\ \hline
+mdmt39.112.B & 6198                     & 5588                              & 9.84                                             \\ \hline
+mdmt39.225.A & 4354                     & 3272                              & 24.85                                            \\ \hline
+mdmt39.225.B & 4260                     & 3873                              & 9.08                                             \\ \hline
+mdmt40.56.A  & 8211                     & 6244                              & 23.96                                            \\ \hline
+mdmt40.56.B  & 8022                     & 7506                              & 6.43                                             \\ \hline
+mdmt40.112.A & 6271                     & 4988                              & 20.46                                            \\ \hline
+mdmt40.112.B & 6198                     & 5759                              & 7.08                                             \\ \hline
+mdmt40.225.A & 4550                     & 4303                              & 5.43                                             \\ \hline
+mdmt40.225.B & 4492                     & 4286                              & 4.59                                             \\ \hline
+\end{tabular}
+\end{table}
+
+É importante destacar que todas as instâncias se executadas no solver por mais de 30 minutos acabavam por consumir toda a memória RAM disponível - encerrando o processo, não sendo possível achar a solução ótima sem a utilização de memória auxiliar em disco. 
+
+\subsection{Teste com o Algoritmo Simulated Annealing}
+
+Os seguintes testes foram executados com os melhores valores encontrados nos testes dos parâmetros: \textit{ dec\_temperature} = 0.96, \textit{numero\_iteracoes} = 200, \textit{ temperatura\_final } = 0.01 e \textit{maxi\_without\_improv} = 40. Cada instância foi executada 3 vezes.
+Na Tabela 2 são apresentados os resultados médios das 3 execuções assim como a melhor solução encontrada em cada instância.
+
+\begin{table}[H]
+\centering
+\caption{Resultados com o algoritmo Simulated Annealing}
+\label{my-label}
+\begin{tabular}{|l|r|r|r|r|r|r|}
+\hline
+\centering Instância & \multicolumn{1}{|p{1cm}|}{\centering BKV} & \multicolumn{1}{|p{2cm}|}{\centering Valor Médio Obtido} & \multicolumn{1}{|p{2cm}|}{\centering Desvio Médio para Referência (\%)} & \multicolumn{1}{|p{2cm}|}{\centering Melhor Valor Obtido} & \multicolumn{1}{|p{2cm}|}{\centering Desvio do Melhor Valor para Referência (\%)} & \multicolumn{1}{|p{2cm}|}{\centering Tempo de Execução Médio (segundos)} \\ \hline
+mdmt39.112.A & 5935 & 6024.2 & -1.50 & 6090 & -2.61 & 105.40 \\ \hline
+mdmt39.112.B & 6198 & 5758.8 & 7.09 & 5806 & 6.32 & 89.23 \\ \hline
+mdmt39.225.A & 4354 & 4134.2 & 5.05 & 4208 & 3.35 & 141.67 \\ \hline
+mdmt39.225.B & 4260 & 4219.4 & 0.95 & 4309 & -1.15 & 132.81 \\ \hline
+mdmt40.56.A & 8211 & 7845.4 & 4.45 & 7963 & 3.02 & 76.66 \\ \hline
+mdmt40.56.B & 8022 & 7997.2 & 0.31 & 8100 & -0.97 & 300.15 \\ \hline
+mdmt40.112.A & 6271 & 6067.4 & 3.25 & 6097 & 2.77 & 122.60 \\ \hline
+mdmt40.112.B & 6198 & 6047.8 & 2.42 & 6137 & 0.98 & 109.29 \\ \hline
+mdmt40.225.A & 4550 & 4415.8 & 2.95 & 4452 & 2.15 & 145.23 \\ \hline
+mdmt40.225.B & 4492 & 4469.8 & 0.49 & 4488 & 0.09 & 143.80 \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Comparação dos testes das instâncias}
+
+A Figura 5 compara os resultados obtidos via CPLEX e algoritmo genético(AG) relatados nas seções 6.1 e 6.2.
+
+\begin{figure}[H]%
+    \centering
+    \includegraphics[width=15cm, height=6cm]{comp}%
+    \caption{Comparação dos testes das instâncias}%
+    \label{fig:example}%
+\end{figure}
+
+\section{Conclusões}
+
+Através dos resultados obtidos, pode-se concluir que para as instâncias do MDMT testadas, a resolução via algoritmo genético é uma opção consideravelmente mais proveitosa que a via solver. Executando o algoritmo genético por cerca de 2 minutos obteve-se valores de soluções até $20\%$ maiores que as encontradas no CPLEX com tempo limite de 30 minutos. Ainda, nos testes da seção 6.2 ultrapassou-se o BKV em 3 das 10 instâncias.
+
+Por meio dos testes da seção 5, notou-se também que o algoritmo genético é bastante sensível aos valores de parâmetros escolhidos, fazendo-se necessário o teste de diversas combinações de valores para encontrar a configuração com melhores soluções.
+
+Como possível melhoria, poderia se testar métodos de mutação que causam maiores perturbações nas soluções que a técnica de Swap-Mutation. Assim, evitaria-se mínimos locais mais facilmente. 
+
+Acredita-se que poderia obter-se melhores soluções e ultrapassar o BKV em mais instâncias se o algoritmo fosse executado por mais tempo e com um valor maior do parâmetro \textit{max\_non\_improving\_generations}.
+
+Em vista dos pontos citados, considera-se que foi possível implementar uma boa configuração da meta-heurística escolhida, obtendo-se valores satisfatórios para a grande maioria das instâncias.
+
+\bibliographystyle{plain}
+\bibliography{bibliography.bib}
+\end{document}

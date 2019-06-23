@@ -6,6 +6,8 @@ from math import sqrt
 from itertools import islice
 from operator import itemgetter
 from numpy.random import random_integers as ri
+import numpy as np
+import time as tm
 
 #Just a function to guide us during development
 #Idea: Test this when we generate neighboards, if is not feasible we brak and give an error
@@ -67,7 +69,7 @@ def learn(i) -> list:
         initialSolution = getInitialSolution(get_instance_on_file[1])
         feasibility_status = checkFeasibility(initialSolution[0], initialSolution[1])
         if feasibility_status:
-            sa = SimulatedAnnealing(initialSolution= initialSolution, temperature=100.0, dec_temperature=0.92, num_iterations=100, max_changes=2)
+            sa = SimulatedAnnealing(initialSolution= initialSolution, temperature=100.0, dec_temperature=0.96, num_iterations=100, max_changes=2, max_non_improving_solutions =40)
             sa.run()
         else:
             print("ERROR: Initial solution not feasible!!!")
@@ -77,7 +79,7 @@ def learn(i) -> list:
 
 class SimulatedAnnealing:
 
-    def __init__(self, initialSolution, temperature, dec_temperature, num_iterations, max_changes):
+    def __init__(self, initialSolution, temperature, dec_temperature, num_iterations, max_changes, max_non_improving_solutions):
         self.actual_state = []
         self.temperature = temperature
         self.dec_temperature = dec_temperature
@@ -91,13 +93,17 @@ class SimulatedAnnealing:
         self.min_value =  -10;
         self.best_score = None
         self.best_s_arrangement = None
+        self.max_non_improving_solutions = max_non_improving_solutions
 
     #Como função de fitness vou somar a duração das tarefas com a solução dada
     def getFitness(self, P,s):
-        sums = []
-        for i in range(len(P)):
-           sums.append(P[i] + s[i])
-        return max(sums)
+        if not(checkFeasibility(P, s)):
+            return np.inf
+        else:      
+            sums = []
+            for i in range(len(P)):
+               sums.append(P[i] + s[i])
+            return max(sums)
 
     def update_temperature(self):
         self.temperature *= self.dec_temperature
@@ -188,39 +194,48 @@ class SimulatedAnnealing:
         self.best_score = self.getFitness(self.actual_state_copy[0], self.actual_state_copy[1])
         self.actual_state_score = self.getFitness(self.actual_state_copy[0], self.actual_state_copy[1])
         self.best_s_arrangement = (self.actual_state_copy[0], self.actual_state_copy[1])
-        while self.temperature > 0.01: 
+        stop = False
+        while self.temperature >  0.01 and not(stop): 
             self.update_temperature()
-            for i in range(1):
-
+            solutions_without_improvement = 0
+            for i in range(self.num_iterations):
                 candidate = (self.actual_state_copy[0], self.get_random_neighbor_2(self.actual_state_copy[0].copy(), self.actual_state_copy[1].copy()))
 
                 candidate_score = self.getFitness(self.actual_state_copy[0], candidate[1])
 
                 delta = candidate_score - self.actual_state_score
 
-                if(delta <= 0):
+                if(delta < 0):
                     self.actual_state_copy = (self.actual_state_copy[0],  candidate[1])
                     self.actual_state_score = candidate_score
+                    solutions_without_improvement = solutions_without_improvement + 1
                     if self.best_score > self.actual_state_score:
                         self.best_s_arrangement = candidate
                         self.best_score = self.actual_state_score
+                        solutions_without_improvement = 0
                 else:
                     boltz = math.exp(-float(delta)/self.temperature)
                     if(random.random() <= boltz):
                         self.actual_state_copy = (self.actual_state_copy[0],  candidate[1])
                         self.score = candidate_score
+                        solutions_without_improvement = solutions_without_improvement + 1
                         if self.best_score > self.actual_state_score:
                             self.best_s_arrangement = candidate
                             self.best_score = self.actual_state_score
-        print(checkFeasibility(self.best_s_arrangement[0], self.best_s_arrangement[1]))
+                            solutions_without_improvement = 0
+                if solutions_without_improvement >= self.max_non_improving_solutions:
+                    stop = True
+                    break;
 
         print(self)
         
     def __str__(self):
         with open("Output.txt", "a+") as text_file:
-            print( '\n Valor encontrado para T na solução final do arquivo' + filename + ' = ' + str(self.best_score) + ' \n', file=text_file)
+            print( '\n Valor encontrado para T na solução final do arquivo ' + filename + ' = ' + str(self.best_score) + ' e o tempo foi  = ' + str(tm.time() - start_time) + ' \n' , file=text_file)
 
         return 'Solução final = \n' + str(["{0:0.2f}".format(i) for i in self.best_s_arrangement[1]]) + ' \n Solução inicial = \n' +  str(["{0:0.2f}".format(i) for i in self.initial_state[1]]) +  '\n Valor encontrado para T na solução inicial= \n' + str(self.getFitness(self.initial_state[0], self.initial_state[1])) + '\n Valor encontrado para T na solução final= \n' + str(self.best_score);
 for i in ["trsp_50_1.dat"]:
-    # for i in range(0, 3):
-    learn(i)
+        global start_time
+        for j in range(0, 3):
+            start_time = tm.time()
+            learn(i)
